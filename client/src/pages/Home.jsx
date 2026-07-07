@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -21,7 +19,7 @@ export default function Home() {
     setError('');
 
     try {
-      const response = await axios.post(`${API_URL}/groups`, { name: groupName });
+      const response = await api.post('/groups', { name: groupName });
       navigate(`/group/${response.data.groupId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create group');

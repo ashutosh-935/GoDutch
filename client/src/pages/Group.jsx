@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function calculateBalances(members, expenses) {
   const balances = {};
@@ -75,9 +73,9 @@ export default function Group() {
     setError('');
     try {
       const [groupRes, membersRes, expensesRes] = await Promise.all([
-        axios.get(`${API_URL}/groups/${groupId}`),
-        axios.get(`${API_URL}/groups/${groupId}/members`),
-        axios.get(`${API_URL}/groups/${groupId}/expenses`),
+        api.get(`/groups/${groupId}`),
+        api.get(`/groups/${groupId}/members`),
+        api.get(`/groups/${groupId}/expenses`),
       ]);
       setGroup(groupRes.data);
       setMembers(membersRes.data);
@@ -98,7 +96,7 @@ export default function Group() {
     if (!newMemberName.trim()) return;
 
     try {
-      await axios.post(`${API_URL}/groups/${groupId}/members`, { name: newMemberName });
+      await api.post(`/groups/${groupId}/members`, { name: newMemberName });
       setNewMemberName('');
       setAddMemberModal(false);
       fetchData();
@@ -109,7 +107,7 @@ export default function Group() {
 
   const handleDeleteMember = async (memberId) => {
     try {
-      await axios.delete(`${API_URL}/groups/${groupId}/members/${memberId}`);
+      await api.delete(`/groups/${groupId}/members/${memberId}`);
       fetchData();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete member');
@@ -123,7 +121,7 @@ export default function Group() {
     }
 
     try {
-      await axios.post(`${API_URL}/groups/${groupId}/expenses`, {
+      await api.post(`/groups/${groupId}/expenses`, {
         ...newExpense,
         amount: parseFloat(newExpense.amount),
       });
@@ -137,7 +135,7 @@ export default function Group() {
 
   const handleDeleteExpense = async (expenseId) => {
     try {
-      await axios.delete(`${API_URL}/groups/expenses/${expenseId}`);
+      await api.delete(`/groups/expenses/${expenseId}`);
       fetchData();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete expense');
