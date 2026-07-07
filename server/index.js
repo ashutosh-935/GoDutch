@@ -11,13 +11,25 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
+// Configure CORS for production
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://godutch.vercel.app', // Your Vercel app URL
+    /\.vercel\.app$/ // Allow all Vercel subdomains
+  ],
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
+// API routes
 app.use('/api/groups', groupRoutes);
 app.use('/api/groups', memberRoutes);
 app.use('/api/groups', expenseRoutes);
 
+// Health check
 app.get('/', (req, res) => {
   res.send('GoDutch API is running!');
 });
