@@ -70,3 +70,28 @@ body {
 .typewriter {
   animation: typewriter 0.3s ease-out forwards;
 }
+
+/* Print styles */
+@media print {
+  body {
+    background-color: #fff !important;
+    background-image: none !important;
+  }
+
+  .receipt-paper {
+    background-image: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Hide buttons when printing */
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+}

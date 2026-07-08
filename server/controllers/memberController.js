@@ -14,16 +14,38 @@ const getMembers = async (req, res) => {
 const addMember = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { name } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ message: 'Member name is required' });
+    
+    if (req.body.members && Array.isArray(req.body.members)) {
+      // Bulk import
+      const memberNames = req.body.members
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+      
+      if (memberNames.length === 0) {
+        return res.status(400).json({ message: 'No valid member names provided' });
+      }
+      
+      // Remove duplicates
+      const uniqueNames = [...new Set(memberNames)];
+      
+      // Create members
+      const membersToAdd = uniqueNames.map(name => ({ groupId, name }));
+      const newMembers = await Member.insertMany(membersToAdd);
+      
+      res.status(201).json({ members: newMembers, count: newMembers.length });
+    } else {
+      // Single member (backwards compatible)
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: 'Member name is required' });
+      }
+      
+      const member = new Member({ groupId, name });
+      await member.save();
+      
+      res.status(201).json(member);
     }
-
-    const member = new Member({ groupId, name });
-    await member.save();
-
-    res.status(201).json(member);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

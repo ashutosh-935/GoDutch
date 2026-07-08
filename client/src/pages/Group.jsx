@@ -60,12 +60,15 @@ export default function Group() {
 
   const [addMemberModal, setAddMemberModal] = useState(false);
   const [addExpenseModal, setAddExpenseModal] = useState(false);
-  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberInput, setNewMemberInput] = useState('');
+  const [newMemberPreview, setNewMemberPreview] = useState([]);
+  const [showMemberSuccess, setShowMemberSuccess] = useState(null);
   const [newExpense, setNewExpense] = useState({
     description: '',
     amount: '',
     paidBy: '',
     participants: [],
+    splitMode: 'everyone',
   });
 
   const fetchData = async () => {
@@ -91,17 +94,39 @@ export default function Group() {
     fetchData();
   }, [groupId]);
 
+  // Parse member input
+  useEffect(() => {
+    if (!newMemberInput) {
+      setNewMemberPreview([]);
+      return;
+    }
+    
+    // Split by commas or newlines
+    const rawNames = newMemberInput.split(/[\n,]/);
+    // Trim, filter empty, remove duplicates
+    const parsedNames = rawNames
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    const uniqueNames = [...new Set(parsedNames)];
+    setNewMemberPreview(uniqueNames);
+  }, [newMemberInput]);
+
   const handleAddMember = async (e) => {
     e.preventDefault();
-    if (!newMemberName.trim()) return;
+    if (newMemberPreview.length === 0) return;
 
     try {
-      await api.post(`/groups/${groupId}/members`, { name: newMemberName });
-      setNewMemberName('');
+      const response = await api.post(`/groups/${groupId}/members`, { 
+        members: newMemberPreview 
+      });
+      setNewMemberInput('');
+      setNewMemberPreview([]);
+      setShowMemberSuccess(response.data.count);
+      setTimeout(() => setShowMemberSuccess(null), 3000);
       setAddMemberModal(false);
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add member');
+      setError(err.response?.data?.message || 'Failed to add members');
     }
   };
 
@@ -114,9 +139,23 @@ export default function Group() {
     }
   };
 
+  useEffect(() => {
+    // When mode is 'everyone', auto select all members
+    if (newExpense.splitMode === 'everyone') {
+      setNewExpense(prev => ({
+        ...prev,
+        participants: members.map(m => m._id)
+      }));
+    }
+  }, [newExpense.splitMode, members]);
+
   const handleAddExpense = async (e) => {
     e.preventDefault();
-    if (!newExpense.description || !newExpense.amount || !newExpense.paidBy || newExpense.participants.length === 0) {
+    const participantsToUse = newExpense.splitMode === 'everyone' 
+      ? members.map(m => m._id) 
+      : newExpense.participants;
+
+    if (!newExpense.description || !newExpense.amount || !newExpense.paidBy || participantsToUse.length === 0) {
       return;
     }
 
@@ -124,8 +163,15 @@ export default function Group() {
       await api.post(`/groups/${groupId}/expenses`, {
         ...newExpense,
         amount: parseFloat(newExpense.amount),
+        participants: participantsToUse,
       });
-      setNewExpense({ description: '', amount: '', paidBy: '', participants: [] });
+      setNewExpense({ 
+        description: '', 
+        amount: '', 
+        paidBy: '', 
+        participants: [], 
+        splitMode: 'everyone' 
+      });
       setAddExpenseModal(false);
       fetchData();
     } catch (err) {
@@ -145,6 +191,10 @@ export default function Group() {
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     alert('Link copied to clipboard!');
+  };
+
+  const handlePrintReceipt = () => {
+    window.print();
   };
 
   const balances = calculateBalances(members, expenses);
@@ -215,14 +265,14 @@ export default function Group() {
             <div className="space-y-2">
               {members.map((member) => (
                 <div key={member._id} className="flex items-center justify-between">
-                  <span>• {member.name}</span>
-                  <button
-                    onClick={() => handleDeleteMember(member._id)}
-                    className="text-xs text-red-700 hover:underline"
-                  >
-                    [X]
-                  </button>
-                </div>
+                    <span>• {member.name}</span>
+                    <button
+                      onClick={() => handleDeleteMember(member._id)}
+                      className="text-xs text-red-700 hover:underline no-print"
+                    >
+                      [X]
+                    </button>
+                  </div>
               ))}
             </div>
           )}
@@ -261,7 +311,7 @@ export default function Group() {
                         <p className="font-bold">₹{expense.amount}</p>
                         <button
                           onClick={() => handleDeleteExpense(expense._id)}
-                          className="text-xs text-red-700 hover:underline mt-1 block"
+                          className="text-xs text-red-700 hover:underline mt-1 block no-print"
                         >
                           [X]
                         </button>
@@ -309,7 +359,12 @@ export default function Group() {
         <hr className="receipt-separator" />
         
         {/* Buttons */}
-        <div className="space-y-3 mt-6">
+        <div className="space-y-3 mt-6 no-print">
+          {showMemberSuccess && (
+            <p className="text-center text-green-800 font-bold">
+              Successfully added {showMemberSuccess} member{showMemberSuccess !== 1 ? 's' : ''}!
+            </p>
+          )}
           <Button onClick={() => setAddMemberModal(true)} className="w-full">
             + ADD MEMBER
           </Button>
@@ -319,6 +374,9 @@ export default function Group() {
           <Button onClick={copyLink} className="w-full">
             COPY GROUP LINK
           </Button>
+          <Button onClick={handlePrintReceipt} className="w-full">
+            PRINT RECEIPT
+          </Button>
           <Link to="/" className="block">
             <Button className="w-full">← BACK HOME</Button>
           </Link>
@@ -327,30 +385,60 @@ export default function Group() {
         {/* Footer */}
         <div className="mt-10 text-center">
           <hr className="receipt-separator" />
+          <p className="text-xs mt-4">Generated by GoDutch</p>
+          <p className="text-xs mt-1">{currentDate}</p>
+          <hr className="receipt-separator mt-4" />
           <p className="text-sm uppercase tracking-wider mt-4 font-bold">
             THANK YOU FOR GOING DUTCH
           </p>
         </div>
       </div>
 
-      <Modal isOpen={addMemberModal} onClose={() => setAddMemberModal(false)} title="Add Member">
+      <Modal isOpen={addMemberModal} onClose={() => setAddMemberModal(false)} title="Add Members">
         <form onSubmit={handleAddMember}>
           <div className="mb-4">
-            <label className="block text-sm font-bold uppercase mb-2">NAME</label>
-            <input
-              type="text"
-              value={newMemberName}
-              onChange={(e) => setNewMemberName(e.target.value)}
-              placeholder="Enter name"
-              className="w-full px-3 py-2 border-2 border-gray-800 bg-white font-mono focus:outline-none"
+            <label className="block text-sm font-bold uppercase mb-2">
+              ENTER MEMBER NAMES
+            </label>
+            <p className="text-xs text-gray-600 mb-2">
+              Separate with commas or new lines
+            </p>
+            <textarea
+              value={newMemberInput}
+              onChange={(e) => setNewMemberInput(e.target.value)}
+              placeholder="Ashutosh
+Rahul, Aman
+Priya"
+              rows={6}
+              className="w-full px-3 py-2 border-2 border-gray-800 bg-white font-mono focus:outline-none resize-none"
               autoFocus
             />
           </div>
+          
+          {newMemberPreview.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-sm font-bold uppercase mb-2">
+                MEMBERS TO BE ADDED
+              </label>
+              <div className="space-y-1">
+                {newMemberPreview.map((name, idx) => (
+                  <p key={idx} className="text-sm">✓ {name}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3">
-            <Button type="button" onClick={() => setAddMemberModal(false)} className="flex-1">
+            <Button type="button" onClick={() => {
+              setNewMemberInput('');
+              setNewMemberPreview([]);
+              setAddMemberModal(false);
+            }} className="flex-1">
               CANCEL
             </Button>
-            <Button type="submit" className="flex-1">ADD</Button>
+            <Button type="submit" disabled={newMemberPreview.length === 0} className="flex-1">
+              ADD {newMemberPreview.length > 0 ? `(${newMemberPreview.length})` : ''}
+            </Button>
           </div>
         </form>
       </Modal>
@@ -393,32 +481,76 @@ export default function Group() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold uppercase mb-2">SPLIT BETWEEN</label>
-              <div className="space-y-2">
-                {members.map(member => (
-                  <label key={member._id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={newExpense.participants.includes(member._id)}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setNewExpense(prev => ({
-                          ...prev,
-                          participants: checked
-                            ? [...prev.participants, member._id]
-                            : prev.participants.filter(id => id !== member._id),
-                        }));
-                      }}
-                      className="rounded border-2 border-gray-800"
-                    />
-                    <span>{member.name}</span>
-                  </label>
-                ))}
+              <label className="block text-sm font-bold uppercase mb-2">SPLIT MODE</label>
+              <div className="flex gap-3">
+                <label className="flex-1 flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="splitMode"
+                    value="everyone"
+                    checked={newExpense.splitMode === 'everyone'}
+                    onChange={(e) => setNewExpense({ 
+                      ...newExpense, 
+                      splitMode: e.target.value 
+                    })}
+                    className="rounded border-2 border-gray-800"
+                  />
+                  <span>Everyone</span>
+                </label>
+                <label className="flex-1 flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="splitMode"
+                    value="custom"
+                    checked={newExpense.splitMode === 'custom'}
+                    onChange={(e) => setNewExpense({ 
+                      ...newExpense, 
+                      splitMode: e.target.value 
+                    })}
+                    className="rounded border-2 border-gray-800"
+                  />
+                  <span>Custom</span>
+                </label>
               </div>
             </div>
+            {newExpense.splitMode === 'custom' && (
+              <div>
+                <label className="block text-sm font-bold uppercase mb-2">SPLIT BETWEEN</label>
+                <div className="space-y-2">
+                  {members.map(member => (
+                    <label key={member._id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={newExpense.participants.includes(member._id)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setNewExpense(prev => ({
+                            ...prev,
+                            participants: checked
+                              ? [...prev.participants, member._id]
+                              : prev.participants.filter(id => id !== member._id),
+                          }));
+                        }}
+                        className="rounded border-2 border-gray-800"
+                      />
+                      <span>{member.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-3 mt-6">
-            <Button type="button" onClick={() => setAddExpenseModal(false)} className="flex-1">
+            <Button type="button" onClick={() => {
+              setNewExpense({ 
+                description: '', 
+                amount: '', 
+                paidBy: '', 
+                participants: [], 
+                splitMode: 'everyone' 
+              });
+              setAddExpenseModal(false);
+            }} className="flex-1">
               CANCEL
             </Button>
             <Button type="submit" className="flex-1">ADD</Button>
