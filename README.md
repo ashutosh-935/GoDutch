@@ -1,18 +1,20 @@
 # GoDutch
 
-A simple bill-splitting app built with the MERN stack. Split expenses with friends without creating accounts!
+A cohesive, immersive POS (Point of Sale) Cashier Dashboard for bill-splitting, built with the MERN stack. Designed specifically for laptop screens to manage group expenses efficiently.
 
 ## Features
 
-- 🚀 No account needed - just create a group and share the link
-- 📱 Responsive design for mobile and desktop
-- 💰 Add members, track expenses, and calculate balances
-- 🎨 Clean, modern UI with Tailwind CSS
+- 🚀 **No account needed** - just create a group and share the link
+- 💻 **POS Cashier Dashboard** - Integrated, 3-column "Command Center" interface optimized for laptop screens
+- 💰 **Expense Management** - Add members, track expenses, and calculate balances
+- 🧾 **Receipt Generation** - Animated receipt printing, digital receipt stack, and PDF export
+- 🔊 **Immersive Experience** - Interactive sound effects for cashier actions
+- 🎨 **Clean, modern UI** built with Tailwind CSS
 
 ## Tech Stack
 
 ### Frontend
-- React 18
+- React 19
 - Vite
 - Tailwind CSS
 - React Router
@@ -136,13 +138,18 @@ GoDutch/
 │   │   ├── components/
 │   │   │   ├── Button.jsx
 │   │   │   ├── Modal.jsx
-│   │   │   ├── Navbar.jsx
-│   │   │   ├── MemberCard.jsx
-│   │   │   ├── ExpenseCard.jsx
-│   │   │   └── BalanceCard.jsx
+│   │   │   ├── POSTerminal.jsx
+│   │   │   ├── ReceiptAnimation.jsx
+│   │   │   ├── ReceiptCard.jsx
+│   │   │   ├── ReceiptPDF.jsx
+│   │   │   ├── ReceiptPrinter.jsx
+│   │   │   ├── ReceiptStack.jsx
+│   │   │   ├── SoundManager.jsx
+│   │   │   └── TerminalContext.jsx
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
-│   │   │   └── Group.jsx
+│   │   │   ├── Group.jsx
+│   │   │   └── NotFound.jsx
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css
