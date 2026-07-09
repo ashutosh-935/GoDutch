@@ -11,15 +11,22 @@ connectDB();
 
 const app = express();
 
-// Configure CORS for production
+// Allow any localhost port (dev) + Vercel (prod)
 const corsOptions = {
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://godutch.vercel.app', // Your Vercel app URL
-    /\.vercel\.app$/ // Allow all Vercel subdomains
-  ],
-  optionsSuccessStatus: 200
+  origin: (origin, callback) => {
+    if (
+      !origin ||                                   // same-origin / curl / Postman
+      /^http:\/\/localhost:\d+$/.test(origin) ||  // any localhost port
+      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) ||
+      origin === 'https://godutch.vercel.app' ||
+      /\.vercel\.app$/.test(origin)
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
 app.use(express.json());
